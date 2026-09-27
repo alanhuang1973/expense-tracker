@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智匯記帳 - 個人收支管理 (Expense Tracker)</title>
+  <meta name="description" content="現代化個人記帳 Web App，支援收支記錄、分類圖表、CSV 匯出與深色模式。">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="2"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+            <path d="M7 15h.01"/>
+            <path d="M11 15h2"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">智匯記帳 <span class="brand-badge">PRO</span></h1>
+          <p class="brand-subtitle">掌控日常開支，實現財務自由</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="exportCsvBtn" class="btn btn-secondary" title="匯出當前月份或所有記帳資料為 CSV">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" x2="12" y1="15" y2="3"/>
+          </svg>
+          <span>匯出 CSV</span>
+        </button>
+        <button id="demoDataBtn" class="btn btn-ghost" title="載入範例資料進行體驗">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/>
+            <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+            <path d="M3 15h6"/>
+            <path d="M6 12v6"/>
+          </svg>
+          <span class="desktop-only">範例資料</span>
+        </button>
+        <button id="clearDataBtn" class="btn btn-ghost text-danger" title="清空所有資料">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          </svg>
+          <span class="desktop-only">清空</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Month Navigator Bar -->
+    <div class="month-bar card">
+      <div class="month-selector">
+        <button id="prevMonthBtn" class="icon-btn" aria-label="上個月">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <div class="current-month-display">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+            <line x1="16" x2="16" y1="2" y2="6"/>
+            <line x1="8" x2="8" y1="2" y2="6"/>
+            <line x1="3" x2="21" y1="10" y2="10"/>
+          </svg>
+          <span id="currentMonthLabel">2026 年 09 月</span>
+        </div>
+        <button id="nextMonthBtn" class="icon-btn" aria-label="下個月">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+        <button id="todayBtn" class="btn btn-pill">回到本月</button>
+      </div>
+
+      <div class="month-filter-group">
+        <div class="select-wrapper">
+          <select id="typeFilter">
+            <option value="all">所有收支</option>
+            <option value="expense">只看支出</option>
+            <option value="income">只看收入</option>
+          </select>
+        </div>
+        <div class="search-input-wrapper">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" x2="16.65" y1="21" y2="16.65"/>
+          </svg>
+          <input type="text" id="searchInput" placeholder="搜尋備註或類別...">
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Stats Cards -->
+    <div class="stats-grid">
+      <!-- Total Expense -->
+      <div class="stat-card expense-stat">
+        <div class="stat-header">
+          <span class="stat-title">本月總支出</span>
+          <div class="stat-icon-wrapper expense-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="19" y2="5"/>
+              <polyline points="5 12 12 5 19 12"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-value" id="totalExpenseDisplay">$0</div>
+        <div class="stat-footer">
+          <span id="expenseCountDisplay">0 筆支出</span>
+        </div>
+      </div>
+
+      <!-- Total Income -->
+      <div class="stat-card income-stat">
+        <div class="stat-header">
+          <span class="stat-title">本月總收入</span>
+          <div class="stat-icon-wrapper income-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" x2="12" y1="5" y2="19"/>
+              <polyline points="19 12 12 19 5 12"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-value" id="totalIncomeDisplay">$0</div>
+        <div class="stat-footer">
+          <span id="incomeCountDisplay">0 筆收入</span>
+        </div>
+      </div>
+
+      <!-- Net Balance -->
+      <div class="stat-card balance-stat">
+        <div class="stat-header">
+          <span class="stat-title">本月淨結餘</span>
+          <div class="stat-icon-wrapper balance-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-value" id="netBalanceDisplay">$0</div>
+        <div class="stat-footer">
+          <span id="balanceStatusText">收支平衡</span>
+        </div>
+      </div>
+
+      <!-- Total Count -->
+      <div class="stat-card total-stat">
+        <div class="stat-header">
+          <span class="stat-title">本月記帳筆數</span>
+          <div class="stat-icon-wrapper total-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" x2="8" y1="13" y2="13"/>
+              <line x1="16" x2="8" y1="17" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-value" id="totalCountDisplay">0</div>
+        <div class="stat-footer">
+          <span>完整記帳記錄</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="main-layout">
+      <!-- Left Column: Add Form & Category Chart -->
+      <div class="left-panel">
+        <!-- Add Transaction Card -->
+        <div class="card form-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" x2="12" y1="8" y2="16"/>
+                <line x1="8" x2="16" y1="12" y2="12"/>
+              </svg>
+              新增記帳
+            </h2>
+            <span class="badge badge-subtle">快速記帳</span>
+          </div>
+
+          <form id="transactionForm" class="transaction-form" novalidate>
+            <!-- Transaction Type Toggle: Expense / Income -->
+            <div class="type-toggle-group">
+              <label class="type-option">
+                <input type="radio" name="txType" value="expense" checked>
+                <span class="type-label expense-pill">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" x2="12" y1="19" y2="5"/>
+                    <polyline points="5 12 12 5 19 12"/>
+                  </svg>
+                  支出
+                </span>
+              </label>
+              <label class="type-option">
+                <input type="radio" name="txType" value="income">
+                <span class="type-label income-pill">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" x2="12" y1="5" y2="19"/>
+                    <polyline points="19 12 12 19 5 12"/>
+                  </svg>
+                  收入
+                </span>
+              </label>
+            </div>
+
+            <!-- Amount Input -->
+            <div class="form-group">
+              <label for="txAmount" class="form-label">金額 (NT$) <span class="required">*</span></label>
+              <div class="amount-input-wrapper">
+                <span class="currency-symbol">$</span>
+                <input type="number" id="txAmount" class="form-control amount-input" placeholder="0" min="1" step="any" required>
+              </div>
+            </div>
+
+            <!-- Category Input -->
+            <div class="form-group">
+              <label for="txCategory" class="form-label">類別 <span class="required">*</span></label>
+              <div class="category-chips-container" id="categoryChips">
+                <!-- Dynamically populated or customized buttons -->
+              </div>
+              <input type="hidden" id="txCategory" required>
+            </div>
+
+            <!-- Date Input -->
+            <div class="form-group">
+              <label for="txDate" class="form-label">日期 <span class="required">*</span></label>
+              <input type="date" id="txDate" class="form-control" required>
+            </div>
+
+            <!-- Note Input -->
+            <div class="form-group">
+              <label for="txNote" class="form-label">備註 (可選)</label>
+              <input type="text" id="txNote" class="form-control" placeholder="例：午餐牛肉麵、捷運悠遊卡儲值..." maxlength="60">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span>加入記帳</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Category Pie Chart Card -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+              </svg>
+              類別佔比分析
+            </h2>
+            <div class="chart-tab-group">
+              <button id="chartExpenseTab" class="tab-btn active">支出</button>
+              <button id="chartIncomeTab" class="tab-btn">收入</button>
+            </div>
+          </div>
+
+          <div class="chart-container-wrapper">
+            <div class="chart-canvas-box">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <!-- Empty state for chart -->
+            <div id="chartEmptyState" class="chart-empty hidden">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="8" x2="16" y1="12" y2="12"/>
+              </svg>
+              <p>本月尚無分類數據</p>
+              <span class="text-muted">新增一筆記帳即可查看圖表</span>
+            </div>
+          </div>
+
+          <!-- Category Breakdown List -->
+          <div class="category-breakdown" id="categoryBreakdownList">
+            <!-- Dynamic breakdown items -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Transactions Table -->
+      <div class="right-panel">
+        <div class="card table-card">
+          <div class="card-header table-header-flex">
+            <div>
+              <h2 class="card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 3h18v18H3z"/>
+                  <path d="M3 9h18"/>
+                  <path d="M3 15h18"/>
+                  <path d="M9 3v18"/>
+                </svg>
+                本月收支明細
+              </h2>
+              <p class="card-subtitle" id="tableFilterSubtitle">顯示當月所有明細</p>
+            </div>
+
+            <div class="table-actions">
+              <div class="badge badge-info" id="tableCountBadge">0 筆記錄</div>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="table-responsive">
+            <table class="data-table" id="transactionTable">
+              <thead>
+                <tr>
+                  <th style="width: 15%;">日期</th>
+                  <th style="width: 14%;">類型</th>
+                  <th style="width: 16%;">類別</th>
+                  <th style="width: 25%;">備註說明</th>
+                  <th style="width: 18%; text-align: right;">金額</th>
+                  <th style="width: 12%; text-align: center;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="transactionTableBody">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+
+            <!-- Empty State for Table -->
+            <div id="tableEmptyState" class="table-empty hidden">
+              <div class="empty-illustration">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                  <rect width="18" height="18" x="3" y="3" rx="2"/>
+                  <path d="M9 12h6"/>
+                  <path d="M12 9v6"/>
+                </svg>
+              </div>
+              <h3 class="empty-title">這個月還沒有記帳記錄喔！</h3>
+              <p class="empty-desc">點擊左側表單快速輸入，或是載入範例資料體驗完整功能。</p>
+              <button id="emptyLoadDemoBtn" class="btn btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/>
+                  <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                </svg>
+                載入範例資料
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>© 2026 智匯記帳 ExpenseTracker · 純前端本地儲存 · 隱私無憂</p>
+    </footer>
+  </div>
+
+  <!-- Edit Transaction Modal -->
+  <div class="modal-backdrop" id="editModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">編輯記帳記錄</h3>
+        <button class="modal-close-btn" id="closeEditModalBtn">&times;</button>
+      </div>
+      <form id="editForm" class="transaction-form">
+        <input type="hidden" id="editTxId">
+        
+        <div class="type-toggle-group">
+          <label class="type-option">
+            <input type="radio" name="editTxType" value="expense">
+            <span class="type-label expense-pill">支出</span>
+          </label>
+          <label class="type-option">
+            <input type="radio" name="editTxType" value="income">
+            <span class="type-label income-pill">收入</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="editTxAmount" class="form-label">金額 (NT$)</label>
+          <div class="amount-input-wrapper">
+            <span class="currency-symbol">$</span>
+            <input type="number" id="editTxAmount" class="form-control amount-input" min="1" step="any" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="editTxCategory" class="form-label">類別</label>
+          <select id="editTxCategory" class="form-control" required>
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editTxDate" class="form-label">日期</label>
+          <input type="date" id="editTxDate" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="editTxNote" class="form-label">備註</label>
+          <input type="text" id="editTxNote" class="form-control" maxlength="60">
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" id="cancelEditModalBtn">取消</button>
+          <button type="submit" class="btn btn-primary">儲存變更</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <!-- App Script -->
+  <script src="js/app.js"></script>
+</body>
+</html>
