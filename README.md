@@ -2,6 +2,8 @@
 
 一個精美、流暢、現代深色風格的個人收支記帳 Web App。採用純原生前端技術（HTML5 / CSS3 / ES6+ JavaScript）構建，無任何框架相依，所有資料均保存在使用者的瀏覽器 `localStorage` 中，注重隱私且離線可用。
 
+🌐 **線上展示 (Live Demo)**：[https://alanhuang1973.github.io/expense-tracker/](https://alanhuang1973.github.io/expense-tracker/)
+
 ---
 
 ## ✨ 核心特色與功能
